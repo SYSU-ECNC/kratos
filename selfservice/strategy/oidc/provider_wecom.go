@@ -2,6 +2,7 @@ package oidc
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/ory/herodot"
 	"github.com/xen0n/go-workwx"
@@ -13,6 +14,10 @@ import (
 type WeComOAuth2Client struct {
 	oauth2.Config
 	app *workwx.WorkwxApp
+}
+
+func (c *WeComOAuth2Client) AuthCodeURL(state string, opts ...oauth2.AuthCodeOption) string {
+	return c.Config.AuthCodeURL(state, opts...) + "#wechat_redirect"
 }
 
 func (c *WeComOAuth2Client) Exchange(ctx context.Context, code string, opts ...oauth2.AuthCodeOption) (*oauth2.Token, error) {
@@ -75,6 +80,7 @@ func (w *ProviderWeCom) OAuth2(ctx context.Context) (OAuth2Client, error) {
 func (w *ProviderWeCom) AuthCodeURLOptions(r ider) []oauth2.AuthCodeOption {
 	return []oauth2.AuthCodeOption{
 		oauth2.SetAuthURLParam("appid", w.config.ClientID),
+		oauth2.SetAuthURLParam("agentid", strconv.FormatInt(w.config.AgentId, 10)),
 	}
 }
 
