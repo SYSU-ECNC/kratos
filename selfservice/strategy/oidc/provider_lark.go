@@ -33,7 +33,7 @@ func (c *LarkOAuth2Client) Exchange(ctx context.Context, code string, opts ...oa
 		Expiry:       time.Unix(larkToken.ExpiresIn, 0),
 	}
 
-	return token.WithExtra(map[string]string{
+	return token.WithExtra(map[string]interface{}{
 		"union_id": larkToken.UnionID,
 	}), nil
 }
