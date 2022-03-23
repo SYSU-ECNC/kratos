@@ -323,9 +323,11 @@
         },
         "provider": {
           "title": "Provider",
-          "description": "Can be one of github, github-app, gitlab, generic, google, microsoft, discord, slack, facebook, auth0, vk, yandex, spotify.",
+          "description": "Can be one of lark, wecom, github, github-app, gitlab, generic, google, microsoft, discord, slack, facebook, auth0, vk, yandex, spotify.",
           "type": "string",
           "enum": [
+            "lark",
+            "wecom",
             "github",
             "github-app",
             "gitlab",
