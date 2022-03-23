@@ -435,6 +435,14 @@
             "-----BEGIN PRIVATE KEY-----\n........\n-----END PRIVATE KEY-----"
           ]
         },
+        "wecom_agent_id": {
+          "title": "WeCom Agent ID",
+          "description": "The App identifier for WeCom",
+          "type": "number",
+          "examples": [
+            "10000000"
+          ]
+        },
         "requested_claims": {
           "$ref": "#/definitions/OIDCClaims"
         }
