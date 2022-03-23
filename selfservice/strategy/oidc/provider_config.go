@@ -73,6 +73,9 @@ type Configuration struct {
 	// This is needed when `provider` is set to `apple`
 	PrivateKey string `json:"apple_private_key"`
 
+	// AgentId is the identifier of a WeCom app, and must be set when `provider` is set to `wecom`.
+	AgentId int64 `json:"wecom_agent_id"`
+
 	// Scope specifies optional requested permissions.
 	Scope []string `json:"scope"`
 
@@ -115,6 +118,10 @@ func (c ConfigurationCollection) Provider(id string, reg dependencies) (Provider
 			// If you add a provider here, please also add a test to
 			// provider_private_net_test.go
 			switch p.Provider {
+			case addProviderName("lark"):
+				return NewProviderLark(&p, reg), nil
+			case addProviderName("wecom"):
+				return NewProviderWeCom(&p, reg), nil
 			case addProviderName("generic"):
 				return NewProviderGenericOIDC(&p, reg), nil
 			case addProviderName("google"):

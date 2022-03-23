@@ -60,7 +60,7 @@ func (g *ProviderGenericOIDC) oauth2ConfigFromEndpoint(ctx context.Context, endp
 	}
 }
 
-func (g *ProviderGenericOIDC) OAuth2(ctx context.Context) (*oauth2.Config, error) {
+func (g *ProviderGenericOIDC) OAuth2(ctx context.Context) (OAuth2Client, error) {
 	p, err := g.provider(ctx)
 	if err != nil {
 		return nil, err

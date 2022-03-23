@@ -47,7 +47,7 @@ func (g *ProviderSpotify) oauth2(ctx context.Context) *oauth2.Config {
 	}
 }
 
-func (g *ProviderSpotify) OAuth2(ctx context.Context) (*oauth2.Config, error) {
+func (g *ProviderSpotify) OAuth2(ctx context.Context) (OAuth2Client, error) {
 	return g.oauth2(ctx), nil
 }
 

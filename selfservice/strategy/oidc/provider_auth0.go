@@ -36,7 +36,7 @@ func NewProviderAuth0(
 	}
 }
 
-func (g *ProviderAuth0) oauth2(ctx context.Context) (*oauth2.Config, error) {
+func (g *ProviderAuth0) oauth2(ctx context.Context) (OAuth2Client, error) {
 	endpoint, err := url.Parse(g.config.IssuerURL)
 	if err != nil {
 		return nil, errors.WithStack(herodot.ErrInternalServerError.WithReasonf("%s", err))
@@ -62,7 +62,7 @@ func (g *ProviderAuth0) oauth2(ctx context.Context) (*oauth2.Config, error) {
 	return c, nil
 }
 
-func (g *ProviderAuth0) OAuth2(ctx context.Context) (*oauth2.Config, error) {
+func (g *ProviderAuth0) OAuth2(ctx context.Context) (OAuth2Client, error) {
 	return g.oauth2(ctx)
 }
 

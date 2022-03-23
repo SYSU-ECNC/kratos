@@ -34,7 +34,7 @@ func NewProviderFacebook(
 	}
 }
 
-func (g *ProviderFacebook) OAuth2(ctx context.Context) (*oauth2.Config, error) {
+func (g *ProviderFacebook) OAuth2(ctx context.Context) (OAuth2Client, error) {
 	p, err := g.provider(ctx)
 	if err != nil {
 		return nil, err

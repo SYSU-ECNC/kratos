@@ -28,6 +28,7 @@ require (
 	github.com/bwmarrin/discordgo v0.23.0
 	github.com/bxcodec/faker/v3 v3.3.1
 	github.com/cenkalti/backoff v2.2.1+incompatible
+	github.com/chyroc/lark v0.0.92 // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/cortesi/modd v0.0.0-20210323234521-b35eddab86cc
 	github.com/davecgh/go-spew v1.1.1
@@ -92,6 +93,7 @@ require (
 	github.com/tidwall/gjson v1.9.4
 	github.com/tidwall/sjson v1.2.2
 	github.com/urfave/negroni v1.0.0
+	github.com/xen0n/go-workwx v1.0.1 // indirect
 	github.com/zmb3/spotify/v2 v2.0.0
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/net v0.0.0-20211020060615-d418f374d309

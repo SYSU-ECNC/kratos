@@ -76,7 +76,7 @@ func (a *ProviderApple) oauth2(ctx context.Context) (*oauth2.Config, error) {
 	return a.oauth2ConfigFromEndpoint(ctx, endpoint), nil
 }
 
-func (a *ProviderApple) OAuth2(ctx context.Context) (*oauth2.Config, error) {
+func (a *ProviderApple) OAuth2(ctx context.Context) (OAuth2Client, error) {
 	return a.oauth2(ctx)
 }
 

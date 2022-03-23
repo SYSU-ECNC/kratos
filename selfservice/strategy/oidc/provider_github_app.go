@@ -44,7 +44,7 @@ func (g *ProviderGitHubApp) oauth2(ctx context.Context) *oauth2.Config {
 	}
 }
 
-func (g *ProviderGitHubApp) OAuth2(ctx context.Context) (*oauth2.Config, error) {
+func (g *ProviderGitHubApp) OAuth2(ctx context.Context) (OAuth2Client, error) {
 	return g.oauth2(ctx), nil
 }
 

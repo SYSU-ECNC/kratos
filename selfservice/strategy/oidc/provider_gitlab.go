@@ -60,7 +60,7 @@ func (g *ProviderGitLab) oauth2(ctx context.Context) (*oauth2.Config, error) {
 	}, nil
 }
 
-func (g *ProviderGitLab) OAuth2(ctx context.Context) (*oauth2.Config, error) {
+func (g *ProviderGitLab) OAuth2(ctx context.Context) (OAuth2Client, error) {
 	return g.oauth2(ctx)
 }
 

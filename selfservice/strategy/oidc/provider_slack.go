@@ -49,7 +49,7 @@ func (d *ProviderSlack) oauth2(ctx context.Context) *oauth2.Config {
 	}
 }
 
-func (d *ProviderSlack) OAuth2(ctx context.Context) (*oauth2.Config, error) {
+func (d *ProviderSlack) OAuth2(ctx context.Context) (OAuth2Client, error) {
 	return d.oauth2(ctx), nil
 }
 

@@ -2,6 +2,7 @@ package oidc
 
 import (
 	"context"
+	"net/http"
 
 	"golang.org/x/oauth2"
 
@@ -10,9 +11,15 @@ import (
 
 type Provider interface {
 	Config() *Configuration
-	OAuth2(ctx context.Context) (*oauth2.Config, error)
+	OAuth2(ctx context.Context) (OAuth2Client, error)
 	Claims(ctx context.Context, exchange *oauth2.Token) (*Claims, error)
 	AuthCodeURLOptions(r ider) []oauth2.AuthCodeOption
+}
+
+type OAuth2Client interface {
+	AuthCodeURL(state string, opts ...oauth2.AuthCodeOption) string
+	Exchange(ctx context.Context, code string, opts ...oauth2.AuthCodeOption) (*oauth2.Token, error)
+	Client(ctx context.Context, exchange *oauth2.Token) *http.Client
 }
 
 // ConvertibleBoolean is used as Apple casually sends the email_verified field as a string.
