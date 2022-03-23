@@ -21,11 +21,12 @@ func (c *WeComOAuth2Client) Exchange(ctx context.Context, code string, opts ...o
 		return nil, err
 	}
 
-	// 因为企业微信没有 UserAccessToken，暂时借用 AccessToken 的位置来传递 UserID
-	// 供 Claims 方法获取用户信息 Orz
-	return &oauth2.Token{
-		AccessToken: wecomToken.UserID,
-	}, nil
+	// 企业微信没有 User 级别的 Access Token
+	token := oauth2.Token{}
+
+	return token.WithExtra(map[string]interface{}{
+		"user_id": wecomToken.UserID,
+	}), nil
 }
 
 type ProviderWeCom struct {
@@ -78,7 +79,7 @@ func (w *ProviderWeCom) AuthCodeURLOptions(r ider) []oauth2.AuthCodeOption {
 }
 
 func (w *ProviderWeCom) Claims(ctx context.Context, exchange *oauth2.Token) (*Claims, error) {
-	identity, err := w.app.GetUser(exchange.AccessToken)
+	identity, err := w.app.GetUser(exchange.Extra("user_id").(string))
 	if err != nil {
 		return nil, errors.WithStack(herodot.ErrInternalServerError.WithReasonf("%s", err))
 	}

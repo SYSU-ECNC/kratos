@@ -26,12 +26,16 @@ func (c *LarkOAuth2Client) Exchange(ctx context.Context, code string, opts ...oa
 		return nil, err
 	}
 
-	return &oauth2.Token{
+	token := oauth2.Token{
 		AccessToken:  larkToken.AccessToken,
 		TokenType:    larkToken.TokenType,
 		RefreshToken: larkToken.RefreshToken,
 		Expiry:       time.Unix(larkToken.ExpiresIn, 0),
-	}, nil
+	}
+
+	return token.WithExtra(map[string]string{
+		"union_id": larkToken.UnionID,
+	}), nil
 }
 
 type ProviderLark struct {
