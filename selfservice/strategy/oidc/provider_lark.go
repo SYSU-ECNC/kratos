@@ -102,9 +102,14 @@ func (l *ProviderLark) Claims(ctx context.Context, exchange *oauth2.Token) (*Cla
 		Name:              identity.User.Name,
 		PreferredUsername: identity.User.EmployeeNo,
 		Nickname:          identity.User.Name,
-		Email:             identity.User.Email,
 		EmailVerified:     true,
 		Picture:           identity.User.Avatar.AvatarOrigin,
+	}
+
+	if identity.User.EnterpriseEmail != "" {
+		claims.Email = identity.User.EnterpriseEmail
+	} else {
+		claims.Email = identity.User.Email
 	}
 
 	return claims, nil
