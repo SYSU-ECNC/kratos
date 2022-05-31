@@ -303,13 +303,12 @@ type getSelfServiceSettingsFlow struct {
 
 	// HTTP Cookies
 	//
-	// When using the SDK on the server side you must include the HTTP Cookie Header
-	// originally sent to your HTTP handler here. You only need to do this for browser-
-	// based flows.
+	// When using the SDK in a browser app, on the server side you must include the HTTP Cookie Header
+	// sent by the client to your server here. This ensures that CSRF and session cookies are respected.
 	//
 	// in: header
 	// name: Cookie
-	Cookies string `json:"cookie"`
+	Cookies string `json:"Cookie"`
 }
 
 // swagger:route GET /self-service/settings/flows v0alpha2 getSelfServiceSettingsFlow
@@ -377,9 +376,12 @@ func (h *Handler) fetchFlow(w http.ResponseWriter, r *http.Request) error {
 
 	if pr.ExpiresAt.Before(time.Now().UTC()) {
 		if pr.Type == flow.TypeBrowser {
+			redirectURL := flow.GetFlowExpiredRedirectURL(h.d.Config(r.Context()), RouteInitBrowserFlow, pr.ReturnTo)
+
 			h.d.Writer().WriteError(w, r, errors.WithStack(x.ErrGone.
 				WithReason("The settings flow has expired. Redirect the user to the settings flow init endpoint to initialize a new settings flow.").
-				WithDetail("redirect_to", urlx.AppendPaths(h.d.Config(r.Context()).SelfPublicURL(), RouteInitBrowserFlow).String())))
+				WithDetail("redirect_to", redirectURL.String()).
+				WithDetail("return_to", pr.ReturnTo)))
 			return nil
 		}
 		h.d.Writer().WriteError(w, r, errors.WithStack(x.ErrGone.
@@ -405,12 +407,22 @@ type submitSelfServiceSettingsFlow struct {
 	Flow string `json:"flow"`
 
 	// in: body
+	// required: true
 	Body submitSelfServiceSettingsFlowBody
 
 	// The Session Token of the Identity performing the settings flow.
 	//
 	// in: header
 	SessionToken string `json:"X-Session-Token"`
+
+	// HTTP Cookies
+	//
+	// When using the SDK in a browser app, on the server side you must include the HTTP Cookie Header
+	// sent by the client to your server here. This ensures that CSRF and session cookies are respected.
+	//
+	// in: header
+	// name: Cookie
+	Cookies string `json:"Cookie"`
 }
 
 // swagger:model submitSelfServiceSettingsFlowBody

@@ -3,6 +3,7 @@ package oidc
 import (
 	"context"
 	"net/http"
+	"net/url"
 
 	"golang.org/x/oauth2"
 
@@ -12,7 +13,7 @@ import (
 type Provider interface {
 	Config() *Configuration
 	OAuth2(ctx context.Context) (OAuth2Client, error)
-	Claims(ctx context.Context, exchange *oauth2.Token) (*Claims, error)
+	Claims(ctx context.Context, exchange *oauth2.Token, query url.Values) (*Claims, error)
 	AuthCodeURLOptions(r ider) []oauth2.AuthCodeOption
 }
 

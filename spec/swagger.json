@@ -105,7 +105,7 @@
             "oryAccessToken": []
           }
         ],
-        "description": "This endpoint creates an identity. It is NOT possible to set an identity's credentials (password, ...)\nusing this method! A way to achieve that will be introduced in the future.\n\nLearn how identities work in [Ory Kratos' User And Identity Model Documentation](https://www.ory.sh/docs/next/kratos/concepts/identity-user-model).",
+        "description": "This endpoint creates an identity. Learn how identities work in [Ory Kratos' User And Identity Model Documentation](https://www.ory.sh/docs/next/kratos/concepts/identity-user-model).",
         "consumes": [
           "application/json"
         ],
@@ -226,7 +226,7 @@
             "oryAccessToken": []
           }
         ],
-        "description": "This endpoint updates an identity. It is NOT possible to set an identity's credentials (password, ...)\nusing this method! A way to achieve that will be introduced in the future.\n\nThe full identity payload (except credentials) is expected. This endpoint does not support patching.\n\nLearn how identities work in [Ory Kratos' User And Identity Model Documentation](https://www.ory.sh/docs/next/kratos/concepts/identity-user-model).",
+        "description": "This endpoint updates an identity. The full identity payload (except credentials) is expected. This endpoint does not support patching.\n\nLearn how identities work in [Ory Kratos' User And Identity Model Documentation](https://www.ory.sh/docs/next/kratos/concepts/identity-user-model).",
         "consumes": [
           "application/json"
         ],
@@ -533,6 +533,60 @@
         }
       }
     },
+    "/admin/sessions/{id}/extend": {
+      "patch": {
+        "security": [
+          {
+            "oryAccessToken": []
+          }
+        ],
+        "description": "Retrieve the session ID from the `/sessions/whoami` endpoint / `toSession` SDK method.",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "v0alpha2"
+        ],
+        "summary": "Calling this endpoint extends the given session ID. If `session.earliest_possible_extend` is set it\nwill only extend the session after the specified time has passed.",
+        "operationId": "adminExtendSession",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "ID is the session's ID.",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "session",
+            "schema": {
+              "$ref": "#/definitions/session"
+            }
+          },
+          "400": {
+            "description": "jsonError",
+            "schema": {
+              "$ref": "#/definitions/jsonError"
+            }
+          },
+          "404": {
+            "description": "jsonError",
+            "schema": {
+              "$ref": "#/definitions/jsonError"
+            }
+          },
+          "500": {
+            "description": "jsonError",
+            "schema": {
+              "$ref": "#/definitions/jsonError"
+            }
+          }
+        }
+      }
+    },
     "/health/alive": {
       "get": {
         "description": "This endpoint returns a 200 status code when the HTTP server is up running.\nThis status does currently not include checks whether the database connection is working.\n\nIf the service supports TLS Edge Termination, this endpoint does not require the\n`X-Forwarded-Proto` header to be set.\n\nBe aware that if you are running multiple nodes of this service, the health status will never\nrefer to the cluster state, only to a single instance.",
@@ -767,6 +821,7 @@
           {
             "name": "Body",
             "in": "body",
+            "required": true,
             "schema": {
               "$ref": "#/definitions/submitSelfServiceLoginFlowBody"
             }
@@ -775,6 +830,12 @@
             "type": "string",
             "description": "The Session Token of the Identity performing the settings flow.",
             "name": "X-Session-Token",
+            "in": "header"
+          },
+          {
+            "type": "string",
+            "description": "HTTP Cookies\n\nWhen using the SDK in a browser app, on the server side you must include the HTTP Cookie Header\nsent by the client to your server here. This ensures that CSRF and session cookies are respected.",
+            "name": "Cookie",
             "in": "header"
           }
         ],
@@ -957,8 +1018,8 @@
           },
           {
             "type": "string",
-            "description": "HTTP Cookies\n\nWhen using the SDK on the server side you must include the HTTP Cookie Header\noriginally sent to your HTTP handler here.",
-            "name": "cookie",
+            "description": "HTTP Cookies\n\nWhen using the SDK in a browser app, on the server side you must include the HTTP Cookie Header\nsent by the client to your server here. This ensures that CSRF and session cookies are respected.",
+            "name": "Cookie",
             "in": "header"
           }
         ],
@@ -1169,9 +1230,16 @@
           {
             "name": "Body",
             "in": "body",
+            "required": true,
             "schema": {
               "$ref": "#/definitions/submitSelfServiceRecoveryFlowBody"
             }
+          },
+          {
+            "type": "string",
+            "description": "HTTP Cookies\n\nWhen using the SDK in a browser app, on the server side you must include the HTTP Cookie Header\nsent by the client to your server here. This ensures that CSRF and session cookies are respected.",
+            "name": "Cookie",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1309,8 +1377,8 @@
           },
           {
             "type": "string",
-            "description": "HTTP Cookies\n\nWhen using the SDK on the server side you must include the HTTP Cookie Header\noriginally sent to your HTTP handler here.",
-            "name": "cookie",
+            "description": "HTTP Cookies\n\nWhen using the SDK in a browser app, on the server side you must include the HTTP Cookie Header\nsent by the client to your server here. This ensures that CSRF and session cookies are respected.",
+            "name": "Cookie",
             "in": "header"
           }
         ],
@@ -1372,9 +1440,16 @@
           {
             "name": "Body",
             "in": "body",
+            "required": true,
             "schema": {
               "$ref": "#/definitions/submitSelfServiceRegistrationFlowBody"
             }
+          },
+          {
+            "type": "string",
+            "description": "HTTP Cookies\n\nWhen using the SDK in a browser app, on the server side you must include the HTTP Cookie Header\nsent by the client to your server here. This ensures that CSRF and session cookies are respected.",
+            "name": "Cookie",
+            "in": "header"
           }
         ],
         "responses": {
@@ -1515,8 +1590,8 @@
           },
           {
             "type": "string",
-            "description": "HTTP Cookies\n\nWhen using the SDK on the server side you must include the HTTP Cookie Header\noriginally sent to your HTTP handler here.",
-            "name": "cookie",
+            "description": "HTTP Cookies\n\nWhen using the SDK in a browser app, on the server side you must include the HTTP Cookie Header\nsent by the client to your server here. This ensures that CSRF and session cookies are respected.",
+            "name": "Cookie",
             "in": "header"
           }
         ],
@@ -1589,6 +1664,7 @@
           {
             "name": "Body",
             "in": "body",
+            "required": true,
             "schema": {
               "$ref": "#/definitions/submitSelfServiceSettingsFlowBody"
             }
@@ -1597,6 +1673,12 @@
             "type": "string",
             "description": "The Session Token of the Identity performing the settings flow.",
             "name": "X-Session-Token",
+            "in": "header"
+          },
+          {
+            "type": "string",
+            "description": "HTTP Cookies\n\nWhen using the SDK in a browser app, on the server side you must include the HTTP Cookie Header\nsent by the client to your server here. This ensures that CSRF and session cookies are respected.",
+            "name": "Cookie",
             "in": "header"
           }
         ],
@@ -1779,8 +1861,8 @@
           },
           {
             "type": "string",
-            "description": "HTTP Cookies\n\nWhen using the SDK on the server side you must include the HTTP Cookie Header\noriginally sent to your HTTP handler here. You only need to do this for browser-\nbased flows.",
-            "name": "cookie",
+            "description": "HTTP Cookies\n\nWhen using the SDK in a browser app, on the server side you must include the HTTP Cookie Header\nsent by the client to your server here. This ensures that CSRF and session cookies are respected.",
+            "name": "Cookie",
             "in": "header"
           }
         ],
@@ -1860,9 +1942,16 @@
           {
             "name": "Body",
             "in": "body",
+            "required": true,
             "schema": {
               "$ref": "#/definitions/submitSelfServiceVerificationFlowBody"
             }
+          },
+          {
+            "type": "string",
+            "description": "HTTP Cookies\n\nWhen using the SDK in a browser app, on the server side you must include the HTTP Cookie Header\nsent by the client to your server here. This ensures that CSRF and session cookies are respected.",
+            "name": "Cookie",
+            "in": "header"
           }
         ],
         "responses": {
@@ -2166,7 +2255,7 @@
     },
     "/sessions/whoami": {
       "get": {
-        "description": "Uses the HTTP Headers in the GET request to determine (e.g. by using checking the cookies) who is authenticated.\nReturns a session object in the body or 401 if the credentials are invalid or no credentials were sent.\nAdditionally when the request it successful it adds the user ID to the 'X-Kratos-Authenticated-Identity-Id' header in the response.\n\nIf you call this endpoint from a server-side application, you must forward the HTTP Cookie Header to this endpoint:\n\n```js\npseudo-code example\nrouter.get('/protected-endpoint', async function (req, res) {\nconst session = await client.toSession(undefined, req.header('cookie'))\n\nconsole.log(session)\n})\n```\n\nWhen calling this endpoint from a non-browser application (e.g. mobile app) you must include the session token:\n\n```js\npseudo-code example\n...\nconst session = await client.toSession(\"the-session-token\")\n\nconsole.log(session)\n```\n\nDepending on your configuration this endpoint might return a 403 status code if the session has a lower Authenticator\nAssurance Level (AAL) than is possible for the identity. This can happen if the identity has password + webauthn\ncredentials (which would result in AAL2) but the session has only AAL1. If this error occurs, ask the user\nto sign in with the second factor or change the configuration.\n\nThis endpoint is useful for:\n\nAJAX calls. Remember to send credentials and set up CORS correctly!\nReverse proxies and API Gateways\nServer-side calls - use the `X-Session-Token` header!\n\nThis endpoint authenticates users by checking\n\nif the `Cookie` HTTP header was set containing an Ory Kratos Session Cookie;\nif the `Authorization: bearer \u003cory-session-token\u003e` HTTP header was set with a valid Ory Kratos Session Token;\nif the `X-Session-Token` HTTP header was set with a valid Ory Kratos Session Token.\n\nIf none of these headers are set or the cooke or token are invalid, the endpoint returns a HTTP 401 status code.\n\nAs explained above, this request may fail due to several reasons. The `error.id` can be one of:\n\n`session_inactive`: No active session was found in the request (e.g. no Ory Session Cookie / Ory Session Token).\n`session_aal2_required`: An active session was found but it does not fulfil the Authenticator Assurance Level, implying that the session must (e.g.) authenticate the second factor.",
+        "description": "Uses the HTTP Headers in the GET request to determine (e.g. by using checking the cookies) who is authenticated.\nReturns a session object in the body or 401 if the credentials are invalid or no credentials were sent.\nAdditionally when the request it successful it adds the user ID to the 'X-Kratos-Authenticated-Identity-Id' header\nin the response.\n\nIf you call this endpoint from a server-side application, you must forward the HTTP Cookie Header to this endpoint:\n\n```js\npseudo-code example\nrouter.get('/protected-endpoint', async function (req, res) {\nconst session = await client.toSession(undefined, req.header('cookie'))\n\nconsole.log(session)\n})\n```\n\nWhen calling this endpoint from a non-browser application (e.g. mobile app) you must include the session token:\n\n```js\npseudo-code example\n...\nconst session = await client.toSession(\"the-session-token\")\n\nconsole.log(session)\n```\n\nDepending on your configuration this endpoint might return a 403 status code if the session has a lower Authenticator\nAssurance Level (AAL) than is possible for the identity. This can happen if the identity has password + webauthn\ncredentials (which would result in AAL2) but the session has only AAL1. If this error occurs, ask the user\nto sign in with the second factor or change the configuration.\n\nThis endpoint is useful for:\n\nAJAX calls. Remember to send credentials and set up CORS correctly!\nReverse proxies and API Gateways\nServer-side calls - use the `X-Session-Token` header!\n\nThis endpoint authenticates users by checking\n\nif the `Cookie` HTTP header was set containing an Ory Kratos Session Cookie;\nif the `Authorization: bearer \u003cory-session-token\u003e` HTTP header was set with a valid Ory Kratos Session Token;\nif the `X-Session-Token` HTTP header was set with a valid Ory Kratos Session Token.\n\nIf none of these headers are set or the cooke or token are invalid, the endpoint returns a HTTP 401 status code.\n\nAs explained above, this request may fail due to several reasons. The `error.id` can be one of:\n\n`session_inactive`: No active session was found in the request (e.g. no Ory Session Cookie / Ory Session Token).\n`session_aal2_required`: An active session was found but it does not fulfil the Authenticator Assurance Level, implying that the session must (e.g.) authenticate the second factor.",
         "produces": [
           "application/json"
         ],
@@ -2298,6 +2387,14 @@
         "state"
       ],
       "properties": {
+        "metadata_admin": {
+          "description": "Store metadata about the user which is only accessible through admin APIs such as `GET /admin/identities/\u003cid\u003e`.",
+          "type": "object"
+        },
+        "metadata_public": {
+          "description": "Store metadata about the identity which the identity itself can see when calling for example the\nsession endpoint. Do not store sensitive information (e.g. credit score) about the identity in this field.",
+          "type": "object"
+        },
         "schema_id": {
           "description": "SchemaID is the ID of the JSON Schema to be used for validating the identity's traits. If set\nwill update the Identity's SchemaID.",
           "type": "string"
@@ -2366,6 +2463,14 @@
       "properties": {
         "credentials": {
           "$ref": "#/definitions/adminIdentityImportCredentials"
+        },
+        "metadata_admin": {
+          "description": "Store metadata about the user which is only accessible through admin APIs such as `GET /admin/identities/\u003cid\u003e`.",
+          "type": "object"
+        },
+        "metadata_public": {
+          "description": "Store metadata about the identity which the identity itself can see when calling for example the\nsession endpoint. Do not store sensitive information (e.g. credit score) about the identity in this field.",
+          "type": "object"
         },
         "recovery_addresses": {
           "description": "RecoveryAddresses contains all the addresses that can be used to recover an identity.\n\nUse this structure to import recovery addresses for an identity. Please keep in mind\nthat the address needs to be represented in the Identity Schema or this field will be overwritten\non the next identity update.",
@@ -2634,6 +2739,12 @@
         "id": {
           "$ref": "#/definitions/UUID"
         },
+        "metadata_admin": {
+          "$ref": "#/definitions/nullJsonRawMessage"
+        },
+        "metadata_public": {
+          "$ref": "#/definitions/nullJsonRawMessage"
+        },
         "recovery_addresses": {
           "description": "RecoveryAddresses contains all the addresses that can be used to recover an identity.",
           "type": "array",
@@ -2870,6 +2981,10 @@
           "example": "Not Found"
         }
       }
+    },
+    "nullJsonRawMessage": {
+      "description": "NullJSONRawMessage represents a json.RawMessage that works well with JSON, SQL, and Swagger and is NULLable-",
+      "type": "object"
     },
     "nullTime": {
       "type": "string",
@@ -3129,6 +3244,7 @@
       "title": "A Recovery Flow",
       "required": [
         "id",
+        "type",
         "expires_at",
         "issued_at",
         "request_url",
@@ -3198,6 +3314,7 @@
       "type": "object",
       "required": [
         "id",
+        "type",
         "expires_at",
         "issued_at",
         "request_url",
@@ -3242,6 +3359,7 @@
       "title": "Flow represents a Settings Flow",
       "required": [
         "id",
+        "type",
         "expires_at",
         "issued_at",
         "request_url",
@@ -3522,7 +3640,6 @@
       "required": [
         "method",
         "password",
-        "password_identifier",
         "identifier"
       ],
       "properties": {
@@ -3977,7 +4094,18 @@
           "$ref": "#/definitions/uiNodeAttributes"
         },
         "group": {
-          "$ref": "#/definitions/uiNodeGroup"
+          "description": "Group specifies which group (e.g. password authenticator) this node belongs to.",
+          "type": "string",
+          "enum": [
+            "default",
+            "password",
+            "oidc",
+            "profile",
+            "link",
+            "totp",
+            "lookup_secret",
+            "webauthn"
+          ]
         },
         "messages": {
           "$ref": "#/definitions/uiTexts"
@@ -3986,7 +4114,15 @@
           "$ref": "#/definitions/uiNodeMeta"
         },
         "type": {
-          "$ref": "#/definitions/uiNodeType"
+          "description": "The node's type",
+          "type": "string",
+          "enum": [
+            "text",
+            "input",
+            "img",
+            "a",
+            "script"
+          ]
         }
       }
     },
@@ -4009,7 +4145,8 @@
           "type": "string"
         },
         "node_type": {
-          "$ref": "#/definitions/uiNodeType"
+          "description": "NodeType represents this node's types. It is a mirror of `node.type` and\nis primarily used to allow compatibility with OpenAPI 3.0.  In this struct it technically always is \"a\".",
+          "type": "string"
         },
         "title": {
           "$ref": "#/definitions/uiText"
@@ -4019,9 +4156,6 @@
     "uiNodeAttributes": {
       "type": "object",
       "title": "Attributes represents a list of attributes (e.g. `href=\"foo\"` for links)."
-    },
-    "uiNodeGroup": {
-      "type": "string"
     },
     "uiNodeImageAttributes": {
       "type": "object",
@@ -4044,7 +4178,8 @@
           "type": "string"
         },
         "node_type": {
-          "$ref": "#/definitions/uiNodeType"
+          "description": "NodeType represents this node's types. It is a mirror of `node.type` and\nis primarily used to allow compatibility with OpenAPI 3.0.  In this struct it technically always is \"img\".",
+          "type": "string"
         },
         "src": {
           "description": "The image's source URL.\n\nformat: uri",
@@ -4082,7 +4217,8 @@
           "type": "string"
         },
         "node_type": {
-          "$ref": "#/definitions/uiNodeType"
+          "description": "NodeType represents this node's types. It is a mirror of `node.type` and\nis primarily used to allow compatibility with OpenAPI 3.0.  In this struct it technically always is \"input\".",
+          "type": "string"
         },
         "onclick": {
           "description": "OnClick may contain javascript which should be executed on click. This is primarily\nused for WebAuthn.",
@@ -4147,7 +4283,8 @@
           "type": "string"
         },
         "node_type": {
-          "$ref": "#/definitions/uiNodeType"
+          "description": "NodeType represents this node's types. It is a mirror of `node.type` and\nis primarily used to allow compatibility with OpenAPI 3.0. In this struct it technically always is \"script\".",
+          "type": "string"
         },
         "nonce": {
           "description": "Nonce for CSP\n\nA nonce you may want to use to improve your Content Security Policy.\nYou do not have to use this value but if you want to improve your CSP\npolicies you may use it. You can also choose to use your own nonce value!",
@@ -4181,15 +4318,13 @@
           "type": "string"
         },
         "node_type": {
-          "$ref": "#/definitions/uiNodeType"
+          "description": "NodeType represents this node's types. It is a mirror of `node.type` and\nis primarily used to allow compatibility with OpenAPI 3.0.  In this struct it technically always is \"text\".",
+          "type": "string"
         },
         "text": {
           "$ref": "#/definitions/uiText"
         }
       }
-    },
-    "uiNodeType": {
-      "type": "string"
     },
     "uiNodes": {
       "type": "array",

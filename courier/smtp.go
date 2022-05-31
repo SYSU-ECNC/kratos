@@ -28,21 +28,42 @@ type smtpClient struct {
 
 func newSMTP(ctx context.Context, deps Dependencies) *smtpClient {
 	uri := deps.CourierConfig(ctx).CourierSMTPURL()
+	var tlsCertificates []tls.Certificate
+	clientCertPath := deps.CourierConfig(ctx).CourierSMTPClientCertPath()
+	clientKeyPath := deps.CourierConfig(ctx).CourierSMTPClientKeyPath()
 
+	if clientCertPath != "" && clientKeyPath != "" {
+		clientCert, err := tls.LoadX509KeyPair(clientCertPath, clientKeyPath)
+		if err == nil {
+			tlsCertificates = append(tlsCertificates, clientCert)
+		} else {
+			deps.Logger().
+				WithError(err).
+				Error("Unable to load tls certificate and private key for smtp client.")
+		}
+	}
+
+	localName := deps.CourierConfig(ctx).CourierSMTPLocalName()
 	password, _ := uri.User.Password()
 	port, _ := strconv.ParseInt(uri.Port(), 10, 0)
 
 	dialer := &gomail.Dialer{
-		Host:     uri.Hostname(),
-		Port:     int(port),
-		Username: uri.User.Username(),
-		Password: password,
+		Host:      uri.Hostname(),
+		Port:      int(port),
+		Username:  uri.User.Username(),
+		Password:  password,
+		LocalName: localName,
 
 		Timeout:      time.Second * 10,
 		RetryFailure: true,
 	}
 
 	sslSkipVerify, _ := strconv.ParseBool(uri.Query().Get("skip_ssl_verify"))
+
+	serverName := uri.Query().Get("server_name")
+	if serverName == "" {
+		serverName = uri.Hostname()
+	}
 
 	// SMTP schemes
 	// smtp: smtp clear text (with uri parameter) or with StartTLS (enforced by default)
@@ -54,13 +75,13 @@ func newSMTP(ctx context.Context, deps Dependencies) *smtpClient {
 		skipStartTLS, _ := strconv.ParseBool(uri.Query().Get("disable_starttls"))
 		if !skipStartTLS {
 			// #nosec G402 This is ok (and required!) because it is configurable and disabled by default.
-			dialer.TLSConfig = &tls.Config{InsecureSkipVerify: sslSkipVerify, ServerName: uri.Hostname()}
+			dialer.TLSConfig = &tls.Config{InsecureSkipVerify: sslSkipVerify, Certificates: tlsCertificates, ServerName: serverName}
 			// Enforcing StartTLS
 			dialer.StartTLSPolicy = gomail.MandatoryStartTLS
 		}
 	case "smtps":
 		// #nosec G402 This is ok (and required!) because it is configurable and disabled by default.
-		dialer.TLSConfig = &tls.Config{InsecureSkipVerify: sslSkipVerify, ServerName: uri.Hostname()}
+		dialer.TLSConfig = &tls.Config{InsecureSkipVerify: sslSkipVerify, Certificates: tlsCertificates, ServerName: serverName}
 		dialer.SSL = true
 	}
 

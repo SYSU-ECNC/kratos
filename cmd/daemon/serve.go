@@ -94,9 +94,7 @@ func ServePublic(r driver.Registry, wg *sync.WaitGroup, cmd *cobra.Command, args
 	n.Use(publicLogger)
 	n.Use(x.HTTPLoaderContextMiddleware(r))
 	n.Use(sqa(ctx, cmd, r))
-	if tracer := r.Tracer(ctx); tracer.IsLoaded() {
-		n.Use(tracer)
-	}
+
 	n.Use(r.PrometheusManager())
 
 	router := x.NewRouterPublic()
@@ -122,6 +120,11 @@ func ServePublic(r driver.Registry, wg *sync.WaitGroup, cmd *cobra.Command, args
 	}
 
 	certs := c.GetTSLCertificatesForPublic()
+
+	if tracer := r.Tracer(ctx); tracer.IsLoaded() {
+		handler = x.TraceHandler(handler)
+	}
+
 	server := graceful.WithDefaults(&http.Server{
 		Handler:   handler,
 		TLSConfig: &tls.Config{Certificates: certs, MinVersion: tls.VersionTLS12},
@@ -160,8 +163,9 @@ func ServeAdmin(r driver.Registry, wg *sync.WaitGroup, cmd *cobra.Command, args 
 		l,
 		"admin#"+c.SelfPublicURL().String(),
 	)
+
 	if r.Config(ctx).DisableAdminHealthRequestLog() {
-		adminLogger.ExcludePaths(healthx.AliveCheckPath, healthx.ReadyCheckPath)
+		adminLogger.ExcludePaths(x.AdminPrefix+healthx.AliveCheckPath, x.AdminPrefix+healthx.ReadyCheckPath)
 	}
 	n.Use(adminLogger)
 	n.UseFunc(x.RedirectAdminMiddleware)
@@ -173,16 +177,19 @@ func ServeAdmin(r driver.Registry, wg *sync.WaitGroup, cmd *cobra.Command, args 
 	r.RegisterAdminRoutes(ctx, router)
 	r.PrometheusManager().RegisterRouter(router.Router)
 
-	if tracer := r.Tracer(ctx); tracer.IsLoaded() {
-		n.Use(tracer)
-	}
-
 	n.UseHandler(router)
 	certs := c.GetTSLCertificatesForAdmin()
+
+	var handler http.Handler = n
+	if tracer := r.Tracer(ctx); tracer.IsLoaded() {
+		handler = x.TraceHandler(n)
+	}
+
 	server := graceful.WithDefaults(&http.Server{
-		Handler:   n,
+		Handler:   handler,
 		TLSConfig: &tls.Config{Certificates: certs, MinVersion: tls.VersionTLS12},
 	})
+
 	addr := c.AdminListenOn()
 
 	l.Printf("Starting the admin httpd on: %s", addr)

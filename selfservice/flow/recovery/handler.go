@@ -202,12 +202,12 @@ type getSelfServiceRecoveryFlow struct {
 
 	// HTTP Cookies
 	//
-	// When using the SDK on the server side you must include the HTTP Cookie Header
-	// originally sent to your HTTP handler here.
+	// When using the SDK in a browser app, on the server side you must include the HTTP Cookie Header
+	// sent by the client to your server here. This ensures that CSRF and session cookies are respected.
 	//
 	// in: header
 	// name: Cookie
-	Cookies string `json:"cookie"`
+	Cookies string `json:"Cookie"`
 }
 
 // swagger:route GET /self-service/recovery/flows v0alpha2 getSelfServiceRecoveryFlow
@@ -266,9 +266,12 @@ func (h *Handler) fetch(w http.ResponseWriter, r *http.Request, _ httprouter.Par
 
 	if f.ExpiresAt.Before(time.Now().UTC()) {
 		if f.Type == flow.TypeBrowser {
+			redirectURL := flow.GetFlowExpiredRedirectURL(h.d.Config(r.Context()), RouteInitBrowserFlow, f.ReturnTo)
+
 			h.d.Writer().WriteError(w, r, errors.WithStack(x.ErrGone.
 				WithReason("The recovery flow has expired. Redirect the user to the recovery flow init endpoint to initialize a new recovery flow.").
-				WithDetail("redirect_to", urlx.AppendPaths(h.d.Config(r.Context()).SelfPublicURL(), RouteInitBrowserFlow).String())))
+				WithDetail("redirect_to", redirectURL.String()).
+				WithDetail("return_to", f.ReturnTo)))
 			return
 		}
 		h.d.Writer().WriteError(w, r, errors.WithStack(x.ErrGone.
@@ -303,7 +306,17 @@ type submitSelfServiceRecoveryFlow struct {
 	Token string `json:"token" form:"token"`
 
 	// in: body
+	// required: true
 	Body submitSelfServiceRecoveryFlowBody
+
+	// HTTP Cookies
+	//
+	// When using the SDK in a browser app, on the server side you must include the HTTP Cookie Header
+	// sent by the client to your server here. This ensures that CSRF and session cookies are respected.
+	//
+	// in: header
+	// name: Cookie
+	Cookies string `json:"Cookie"`
 }
 
 // swagger:model submitSelfServiceRecoveryFlowBody
@@ -367,7 +380,7 @@ func (h *Handler) submitFlow(w http.ResponseWriter, r *http.Request, ps httprout
 		return
 	}
 
-	var g node.Group
+	var g node.UiNodeGroup
 	var found bool
 	for _, ss := range h.d.AllRecoveryStrategies() {
 		err := ss.Recover(w, r, f)

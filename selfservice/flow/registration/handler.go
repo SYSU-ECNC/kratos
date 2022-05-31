@@ -261,12 +261,12 @@ type getSelfServiceRegistrationFlow struct {
 
 	// HTTP Cookies
 	//
-	// When using the SDK on the server side you must include the HTTP Cookie Header
-	// originally sent to your HTTP handler here.
+	// When using the SDK in a browser app, on the server side you must include the HTTP Cookie Header
+	// sent by the client to your server here. This ensures that CSRF and session cookies are respected.
 	//
 	// in: header
 	// name: Cookie
-	Cookies string `json:"cookie"`
+	Cookies string `json:"Cookie"`
 }
 
 // swagger:route GET /self-service/registration/flows v0alpha2 getSelfServiceRegistrationFlow
@@ -331,9 +331,12 @@ func (h *Handler) fetchFlow(w http.ResponseWriter, r *http.Request, ps httproute
 
 	if ar.ExpiresAt.Before(time.Now()) {
 		if ar.Type == flow.TypeBrowser {
+			redirectURL := flow.GetFlowExpiredRedirectURL(h.d.Config(r.Context()), RouteInitBrowserFlow, ar.ReturnTo)
+
 			h.d.Writer().WriteError(w, r, errors.WithStack(x.ErrGone.WithID(text.ErrIDSelfServiceFlowExpired).
 				WithReason("The registration flow has expired. Redirect the user to the registration flow init endpoint to initialize a new registration flow.").
-				WithDetail("redirect_to", urlx.AppendPaths(h.d.Config(r.Context()).SelfPublicURL(), RouteInitBrowserFlow).String())))
+				WithDetail("redirect_to", redirectURL.String()).
+				WithDetail("return_to", ar.ReturnTo)))
 			return
 		}
 		h.d.Writer().WriteError(w, r, errors.WithStack(x.ErrGone.WithID(text.ErrIDSelfServiceFlowExpired).
@@ -358,7 +361,17 @@ type submitSelfServiceRegistrationFlow struct {
 	Flow string `json:"flow"`
 
 	// in: body
+	// required: true
 	Body submitSelfServiceRegistrationFlowBody
+
+	// HTTP Cookies
+	//
+	// When using the SDK in a browser app, on the server side you must include the HTTP Cookie Header
+	// sent by the client to your server here. This ensures that CSRF and session cookies are respected.
+	//
+	// in: header
+	// name: Cookie
+	Cookies string `json:"Cookie"`
 }
 
 // swagger:model submitSelfServiceRegistrationFlowBody

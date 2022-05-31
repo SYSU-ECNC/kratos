@@ -17,6 +17,7 @@ import (
 
 	"github.com/ory/jsonschema/v3/httploader"
 	"github.com/ory/x/httpx"
+	"github.com/ory/x/otelx"
 
 	"golang.org/x/net/publicsuffix"
 
@@ -45,22 +46,22 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/ory/x/configx"
-	"github.com/ory/x/dbal"
 	"github.com/ory/x/jsonx"
 	"github.com/ory/x/logrusx"
 	"github.com/ory/x/stringsx"
-	"github.com/ory/x/tracing"
 )
 
 const (
 	DefaultIdentityTraitsSchemaID                            = "default"
 	DefaultBrowserReturnURL                                  = "default_browser_return_url"
-	DefaultSQLiteMemoryDSN                                   = dbal.SQLiteInMemory
+	DefaultSQLiteMemoryDSN                                   = "sqlite://file::memory:?_fk=true&cache=shared"
 	DefaultPasswordHashingAlgorithm                          = "argon2"
 	DefaultCipherAlgorithm                                   = "noop"
 	UnknownVersion                                           = "unknown version"
 	ViperKeyDSN                                              = "dsn"
 	ViperKeyCourierSMTPURL                                   = "courier.smtp.connection_uri"
+	ViperKeyCourierSMTPClientCertPath                        = "courier.smtp.client_cert_path"
+	ViperKeyCourierSMTPClientKeyPath                         = "courier.smtp.client_key_path"
 	ViperKeyCourierTemplatesPath                             = "courier.template_override_path"
 	ViperKeyCourierTemplatesRecoveryInvalidEmail             = "courier.templates.recovery.invalid.email"
 	ViperKeyCourierTemplatesRecoveryValidEmail               = "courier.templates.recovery.valid.email"
@@ -69,6 +70,7 @@ const (
 	ViperKeyCourierSMTPFrom                                  = "courier.smtp.from_address"
 	ViperKeyCourierSMTPFromName                              = "courier.smtp.from_name"
 	ViperKeyCourierSMTPHeaders                               = "courier.smtp.headers"
+	ViperKeyCourierSMTPLocalName                             = "courier.smtp.local_name"
 	ViperKeyCourierSMSRequestConfig                          = "courier.sms.request_config"
 	ViperKeyCourierSMSEnabled                                = "courier.sms.enabled"
 	ViperKeyCourierSMSFrom                                   = "courier.sms.from"
@@ -105,6 +107,7 @@ const (
 	ViperKeySessionPath                                      = "session.cookie.path"
 	ViperKeySessionPersistentCookie                          = "session.cookie.persistent"
 	ViperKeySessionWhoAmIAAL                                 = "session.whoami.required_aal"
+	ViperKeySessionRefreshMinTimeLeft                        = "session.earliest_possible_extend"
 	ViperKeyCookieSameSite                                   = "cookies.same_site"
 	ViperKeyCookieDomain                                     = "cookies.domain"
 	ViperKeyCookiePath                                       = "cookies.path"
@@ -207,8 +210,8 @@ type (
 		Config  json.RawMessage `json:"config"`
 	}
 	Schema struct {
-		ID  string `json:"id"`
-		URL string `json:"url"`
+		ID  string `json:"id" koanf:"id"`
+		URL string `json:"url" koanf:"url"`
 	}
 	PasswordPolicy struct {
 		HaveIBeenPwnedHost               string `json:"haveibeenpwned_host"`
@@ -238,9 +241,12 @@ type (
 	}
 	CourierConfigs interface {
 		CourierSMTPURL() *url.URL
+		CourierSMTPClientCertPath() string
+		CourierSMTPClientKeyPath() string
 		CourierSMTPFrom() string
 		CourierSMTPFromName() string
 		CourierSMTPHeaders() map[string]string
+		CourierSMTPLocalName() string
 		CourierSMSEnabled() bool
 		CourierSMSFrom() string
 		CourierSMSRequestConfig() json.RawMessage
@@ -513,19 +519,8 @@ func (p *Config) OIDCRedirectURIBase() *url.URL {
 	return p.Source().URIF(ViperKeyOIDCBaseRedirectURL, p.SelfPublicURL())
 }
 
-func (p *Config) IdentityTraitsSchemas() (Schemas, error) {
-	var ss Schemas
-	out, err := p.p.Marshal(kjson.Parser())
-	if err != nil {
-		return ss, nil
-	}
-
-	config := gjson.GetBytes(out, ViperKeyIdentitySchemas).Raw
-	if len(config) == 0 {
-		return ss, nil
-	}
-
-	if err := json.NewDecoder(bytes.NewBufferString(config)).Decode(&ss); err != nil {
+func (p *Config) IdentityTraitsSchemas() (ss Schemas, err error) {
+	if err = p.Source().Koanf.Unmarshal(ViperKeyIdentitySchemas, &ss); err != nil {
 		return ss, nil
 	}
 
@@ -870,12 +865,24 @@ func (p *Config) SelfServiceFlowLogoutRedirectURL() *url.URL {
 	return p.p.RequestURIF(ViperKeySelfServiceLogoutBrowserDefaultReturnTo, p.SelfServiceBrowserDefaultReturnTo())
 }
 
+func (p *Config) CourierSMTPClientCertPath() string {
+	return p.p.StringF(ViperKeyCourierSMTPClientCertPath, "")
+}
+
+func (p *Config) CourierSMTPClientKeyPath() string {
+	return p.p.StringF(ViperKeyCourierSMTPClientKeyPath, "")
+}
+
 func (p *Config) CourierSMTPFrom() string {
 	return p.p.StringF(ViperKeyCourierSMTPFrom, "noreply@kratos.ory.sh")
 }
 
 func (p *Config) CourierSMTPFromName() string {
 	return p.p.StringF(ViperKeyCourierSMTPFromName, "")
+}
+
+func (p *Config) CourierSMTPLocalName() string {
+	return p.p.StringF(ViperKeyCourierSMTPLocalName, "localhost")
 }
 
 func (p *Config) CourierTemplatesRoot() string {
@@ -1015,7 +1022,7 @@ func (p *Config) ParseURI(rawUrl string) (*url.URL, error) {
 	return parsed, nil
 }
 
-func (p *Config) Tracing() *tracing.Config {
+func (p *Config) Tracing() *otelx.Config {
 	return p.p.TracingConfig("Ory Kratos")
 }
 
@@ -1104,6 +1111,10 @@ func (p *Config) CookieDomain() string {
 
 func (p *Config) SessionWhoAmIAAL() string {
 	return p.p.String(ViperKeySessionWhoAmIAAL)
+}
+
+func (p *Config) SessionRefreshMinTimeLeft() time.Duration {
+	return p.p.DurationF(ViperKeySessionRefreshMinTimeLeft, p.SessionLifespan())
 }
 
 func (p *Config) SelfServiceSettingsRequiredAAL() string {

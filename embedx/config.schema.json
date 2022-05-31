@@ -341,7 +341,8 @@
             "vk",
             "yandex",
             "apple",
-            "spotify"
+            "spotify",
+            "netid"
           ],
           "examples": [
             "google"
@@ -409,6 +410,19 @@
             "consumers",
             "8eaef023-2b34-4da1-9baa-8bc8c9d6a490",
             "contoso.onmicrosoft.com"
+          ]
+        },
+        "subject_source": {
+          "title": "Microsoft subject source",
+          "description": "Controls which source the subject identifier is taken from by microsoft provider. If set to `userinfo` (the default) then the identifier is taken from the `sub` field of OIDC ID token or data received from `/userinfo` standard OIDC endpoint. If set to `me` then the `id` field of data structure received from `https://graph.microsoft.com/v1.0/me` is taken as an identifier.",
+          "type": "string",
+          "enum": [
+            "userinfo",
+            "me"
+          ],
+          "default": "userinfo",
+          "examples": [
+            "userinfo"
           ]
         },
         "apple_team_id": {
@@ -1491,10 +1505,23 @@
                 "smtp://foo:bar@my-mailserver:1234/ (Explicit StartTLS with certificate trust verification)",
                 "smtp://foo:bar@my-mailserver:1234/?skip_ssl_verify=true (NOT RECOMMENDED: Explicit StartTLS without certificate trust verification)",
                 "smtps://foo:bar@my-mailserver:1234/ (Implicit TLS with certificate trust verification)",
-                "smtps://foo:bar@my-mailserver:1234/?skip_ssl_verify=true (NOT RECOMMENDED: Implicit TLS without certificate trust verification)"
+                "smtps://foo:bar@my-mailserver:1234/?skip_ssl_verify=true (NOT RECOMMENDED: Implicit TLS without certificate trust verification)",
+                "smtps://subdomain.my-mailserver:1234/?server_name=my-mailserver (allows TLS to work if the server is hosted on a sudomain that uses a non-wildcard domain certificate)"
               ],
               "type": "string",
               "pattern": "^smtps?:\\/\\/.*"
+            },
+            "client_cert_path": {
+              "title": "SMTP Client certificate path",
+              "description": "Path of the client X.509 certificate, in case of certificate based client authentication to the SMTP server.",
+              "type": "string",
+              "default": ""
+            },
+            "client_key_path": {
+              "title": "SMTP Client private key path",
+              "description": "Path of the client certificate private key, in case of certificate based client authentication to the SMTP server",
+              "type": "string",
+              "default": ""
             },
             "from_address": {
               "title": "SMTP Sender Address",
@@ -1522,6 +1549,12 @@
                   "X-SES-RETURN-PATH-ARN": "arn:aws:ses:us-west-2:123456789012:identity/example.com"
                 }
               ]
+            },
+            "local_name": {
+              "title": "SMTP HELO/EHLO name",
+              "description": "Identifier used in the SMTP HELO/EHLO command. Some SMTP relays require a unique identifier.",
+              "type": "string",
+              "default": "localhost"
             }
           },
           "required": [
@@ -1824,160 +1857,7 @@
       "additionalProperties": false
     },
     "tracing": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "Ory Kratos supports distributed tracing.",
-      "properties": {
-        "provider": {
-          "type": "string",
-          "description": "Set this to the tracing backend you wish to use. Supports Jaeger, Zipkin, DataDog, elastic-apm and instana. If omitted or empty, tracing will be disabled. Use environment variables to configure DataDog (see https://docs.datadoghq.com/tracing/setup/go/#configuration).",
-          "enum": [
-            "jaeger",
-            "zipkin",
-            "datadog",
-            "elastic-apm",
-            "instana"
-          ],
-          "examples": [
-            "jaeger"
-          ]
-        },
-        "service_name": {
-          "type": "string",
-          "description": "Specifies the service name to use on the tracer.",
-          "examples": [
-            "Ory Kratos"
-          ]
-        },
-        "providers": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "jaeger": {
-              "type": "object",
-              "additionalProperties": false,
-              "description": "Configures the jaeger tracing backend.",
-              "properties": {
-                "local_agent_address": {
-                  "type": "string",
-                  "description": "The address of the jaeger-agent where spans should be sent to.",
-                  "oneOf": [
-                    {
-                      "pattern": "^\\[(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))]:([0-9]*)$"
-                    },
-                    {
-                      "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}:([0-9]*)$"
-                    },
-                    {
-                      "format": "uri"
-                    }
-                  ],
-                  "examples": [
-                    "127.0.0.1:6831"
-                  ]
-                },
-                "propagation": {
-                  "type": "string",
-                  "description": "The tracing header format",
-                  "examples": [
-                    "jaeger"
-                  ]
-                },
-                "sampling": {
-                  "type": "object",
-                  "propertyNames": {
-                    "enum": [
-                      "type",
-                      "value",
-                      "server_url"
-                    ]
-                  },
-                  "allOf": [
-                    {
-                      "oneOf": [
-                        {
-                          "properties": {
-                            "type": {
-                              "description": "The type of the sampler you want to use.",
-                              "const": "const"
-                            },
-                            "value": {
-                              "type": "integer",
-                              "description": "The value passed to the sampler type that has been configured.",
-                              "minimum": 0,
-                              "maximum": 1
-                            }
-                          }
-                        },
-                        {
-                          "properties": {
-                            "type": {
-                              "description": "The type of the sampler you want to use.",
-                              "const": "rateLimiting"
-                            },
-                            "value": {
-                              "type": "integer",
-                              "description": "The value passed to the sampler type that has been configured.",
-                              "minimum": 0
-                            }
-                          }
-                        },
-                        {
-                          "properties": {
-                            "type": {
-                              "description": "The type of the sampler you want to use.",
-                              "const": "probabilistic"
-                            },
-                            "value": {
-                              "type": "number",
-                              "description": "The value passed to the sampler type that has been configured.",
-                              "minimum": 0,
-                              "maximum": 1
-                            }
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "properties": {
-                        "server_url": {
-                          "type": "string",
-                          "description": "The address of jaeger-agent's HTTP sampling server",
-                          "format": "uri"
-                        }
-                      }
-                    }
-                  ],
-                  "examples": [
-                    {
-                      "type": "const",
-                      "value": 1,
-                      "server_url": "http://localhost:5778/sampling"
-                    }
-                  ]
-                }
-              }
-            },
-            "zipkin": {
-              "type": "object",
-              "additionalProperties": false,
-              "description": "Configures the zipkin tracing backend.",
-              "properties": {
-                "server_url": {
-                  "type": "string",
-                  "description": "The address of Zipkin server where spans should be sent to.",
-                  "format": "uri"
-                }
-              },
-              "examples": [
-                {
-                  "server_url": "http://localhost:9411/api/v2/spans"
-                }
-              ]
-            }
-          }
-        }
-      }
+      "$ref": "ory://tracing-config"
     },
     "log": {
       "title": "Log",
@@ -2031,6 +1911,7 @@
         "schemas": {
           "type": "array",
           "title": "All JSON Schemas for Identity Traits",
+          "description": "Note that identities that used the \"default_schema_url\" field in older kratos versions will be corrupted unless you specify their schema url with the id \"default\" in this list.",
           "examples": [
             [
               {
@@ -2313,6 +2194,18 @@
             }
           },
           "additionalProperties": false
+        },
+        "earliest_possible_extend": {
+          "title": "Earliest Possible Session Extension",
+          "description": "Sets when a session can be extended. Settings this value to `24h` will prevent the session from being extended before until 24 hours before it expires. This setting prevents excessive writes to the database. We highly recommend setting this value.",
+          "type": "string",
+          "pattern": "^([0-9]+(ns|us|ms|s|m|h))+$",
+          "default": "24h",
+          "examples": [
+            "1h",
+            "1m",
+            "1s"
+          ]
         }
       }
     },

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,8 +45,27 @@ func send(code int) httprouter.Handle {
 	}
 }
 
-func assertNoCSRFCookieInResponse(t *testing.T, ts *httptest.Server, c *http.Client, res *http.Response) {
-	assert.Len(t, res.Cookies(), 0, res.Cookies())
+func getSessionCookie(t *testing.T, r *http.Response) *http.Cookie {
+	var sessionCookie *http.Cookie
+	var found bool
+	for _, c := range r.Cookies() {
+		if c.Name == config.DefaultSessionCookieName {
+			found = true
+			sessionCookie = c
+		}
+	}
+	require.True(t, found)
+	return sessionCookie
+}
+
+func assertNoCSRFCookieInResponse(t *testing.T, _ *httptest.Server, _ *http.Client, r *http.Response) {
+	found := false
+	for _, c := range r.Cookies() {
+		if strings.HasPrefix(c.Name, "csrf_token") {
+			found = true
+		}
+	}
+	require.False(t, found)
 }
 
 func TestSessionWhoAmI(t *testing.T) {
@@ -54,7 +74,21 @@ func TestSessionWhoAmI(t *testing.T) {
 
 	// set this intermediate because kratos needs some valid url for CRUDE operations
 	conf.MustSet(config.ViperKeyPublicBaseURL, "http://example.com")
-	h, _ := testhelpers.MockSessionCreateHandler(t, reg)
+	i := &identity.Identity{
+		ID:    x.NewUUID(),
+		State: identity.StateActive,
+		Credentials: map[identity.CredentialsType]identity.Credentials{
+			identity.CredentialsTypePassword: {Type: identity.CredentialsTypePassword,
+				Identifiers: []string{x.NewUUID().String()},
+				Config:      []byte(`{"hashed_password":"$argon2id$v=19$m=32,t=2,p=4$cm94YnRVOW5jZzFzcVE4bQ$MNzk5BtR2vUhrp6qQEjRNw"}`),
+			},
+		},
+		Traits:         identity.Traits(`{"baz":"bar","foo":true,"bar":2.5}`),
+		MetadataAdmin:  []byte(`{"admin":"ma"}`),
+		MetadataPublic: []byte(`{"public":"mp"}`),
+	}
+	h, _ := testhelpers.MockSessionCreateHandlerWithIdentity(t, reg, i)
+
 	r.GET("/set", h)
 	conf.MustSet(config.ViperKeyPublicBaseURL, ts.URL)
 
@@ -131,17 +165,21 @@ func TestSessionWhoAmI(t *testing.T) {
 
 				res, err = client.Do(req)
 				require.NoError(t, err)
+				body, err := ioutil.ReadAll(res.Body)
+				require.NoError(t, err)
 				assertNoCSRFCookieInResponse(t, ts, client, res) // Test that no CSRF cookie is ever set here.
 
 				assert.EqualValues(t, http.StatusOK, res.StatusCode)
 				assert.NotEmpty(t, res.Header.Get("X-Kratos-Authenticated-Identity-Id"))
+
+				assert.Empty(t, gjson.GetBytes(body, "identity.credentials"))
+				assert.Equal(t, "mp", gjson.GetBytes(body, "identity.metadata_public.public").String(), "%s", body)
+				assert.False(t, gjson.GetBytes(body, "identity.metadata_admin").Exists())
 			})
 		}
 	})
 
 	/*
-
-
 		t.Run("case=respects AAL config", func(t *testing.T) {
 			conf.MustSet(config.ViperKeySessionLifespan, "1m")
 
@@ -598,5 +636,48 @@ func TestHandlerSelfServiceSessionManagement(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusNoContent, resp.StatusCode, "case=%d", j)
 		}
+	})
+}
+
+func TestHandlerRefreshSessionBySessionID(t *testing.T) {
+	conf, reg := internal.NewFastRegistryWithMocks(t)
+	_, ts, _, _ := testhelpers.NewKratosServerWithCSRFAndRouters(t, reg)
+
+	// set this intermediate because kratos needs some valid url for CRUDE operations
+	conf.MustSet(config.ViperKeyPublicBaseURL, "http://example.com")
+	testhelpers.SetDefaultIdentitySchema(conf, "file://./stub/identity.schema.json")
+	conf.MustSet(config.ViperKeyPublicBaseURL, ts.URL)
+
+	t.Run("case=should return 200 after refreshing one session", func(t *testing.T) {
+		client := testhelpers.NewClientWithCookies(t)
+		i := identity.NewIdentity("")
+		require.NoError(t, reg.IdentityManager().Create(context.Background(), i))
+		s := &Session{Identity: i, ExpiresAt: time.Now().Add(5 * time.Minute)}
+		require.NoError(t, reg.SessionPersister().UpsertSession(context.Background(), s))
+
+		req, _ := http.NewRequest("PATCH", ts.URL+"/admin/sessions/"+s.ID.String()+"/extend", nil)
+		res, err := client.Do(req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, res.StatusCode)
+
+		s, err = reg.SessionPersister().GetSession(context.Background(), s.ID)
+		require.Nil(t, err)
+	})
+
+	t.Run("case=should return 400 when bad UUID is sent", func(t *testing.T) {
+		client := testhelpers.NewClientWithCookies(t)
+		req, _ := http.NewRequest("PATCH", ts.URL+"/admin/sessions/BADUUID/extend", nil)
+		res, err := client.Do(req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, res.StatusCode)
+	})
+
+	t.Run("case=should return 404 when calling with missing UUID", func(t *testing.T) {
+		client := testhelpers.NewClientWithCookies(t)
+		someID, _ := uuid.NewV4()
+		req, _ := http.NewRequest("PATCH", ts.URL+"/admin/sessions/"+someID.String()+"/extend", nil)
+		res, err := client.Do(req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, res.StatusCode)
 	})
 }

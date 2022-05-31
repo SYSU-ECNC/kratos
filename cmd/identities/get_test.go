@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/spf13/cobra"
+
 	"github.com/ory/kratos/cmd/identities"
 	"github.com/ory/x/assertx"
 
@@ -19,16 +21,18 @@ import (
 )
 
 func TestGetCmd(t *testing.T) {
-	c := identities.NewGetCmd()
+	c := identities.NewGetIdentityCmd(new(cobra.Command))
 	reg := setup(t, c)
 
 	t.Run("case=gets a single identity", func(t *testing.T) {
 		i := identity.NewIdentity(config.DefaultIdentityTraitsSchemaID)
+		i.MetadataPublic = []byte(`"public"`)
+		i.MetadataAdmin = []byte(`"admin"`)
 		require.NoError(t, reg.Persister().CreateIdentity(context.Background(), i))
 
 		stdOut := execNoErr(t, c, i.ID.String())
 
-		ij, err := json.Marshal(i)
+		ij, err := json.Marshal(identity.WithCredentialsMetadataAndAdminMetadataInJSON(*i))
 		require.NoError(t, err)
 
 		assertx.EqualAsJSONExcept(t, json.RawMessage(ij), json.RawMessage(stdOut), []string{"created_at", "updated_at"})
@@ -48,7 +52,7 @@ func TestGetCmd(t *testing.T) {
 	t.Run("case=fails with unknown ID", func(t *testing.T) {
 		stdErr := execErr(t, c, x.NewUUID().String())
 
-		assert.Contains(t, stdErr, "404 Not Found", stdErr)
+		assert.Contains(t, stdErr, "Unable to locate the resource", stdErr)
 	})
 
 	t.Run("case=gets a single identity with oidc credentials", func(t *testing.T) {
@@ -86,6 +90,8 @@ func TestGetCmd(t *testing.T) {
 			}
 		}
 		i := identity.NewIdentity(config.DefaultIdentityTraitsSchemaID)
+		i.MetadataPublic = []byte(`"public"`)
+		i.MetadataAdmin = []byte(`"admin"`)
 		i.SetCredentials(identity.CredentialsTypeOIDC, applyCredentials("uniqueIdentifier", "accessBar", "refreshBar", "idBar", true))
 		// duplicate identity with decrypted tokens
 		di := i.CopyWithoutCredentials()
@@ -95,7 +101,7 @@ func TestGetCmd(t *testing.T) {
 		require.NoError(t, reg.Persister().CreateIdentity(context.Background(), i))
 
 		stdOut := execNoErr(t, c, i.ID.String())
-		ij, err := json.Marshal(identity.WithCredentialsInJSON(*di))
+		ij, err := json.Marshal(identity.WithCredentialsAndAdminMetadataInJSON(*di))
 		require.NoError(t, err)
 
 		ii := []string{"schema_url", "state_changed_at", "created_at", "updated_at", "credentials.oidc.created_at", "credentials.oidc.updated_at", "credentials.oidc.version"}
